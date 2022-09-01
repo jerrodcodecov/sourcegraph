@@ -41,6 +41,8 @@ type service interface {
 	GetIndexConfigurationByRepositoryID(ctx context.Context, repositoryID int) (_ shared.IndexConfiguration, _ bool, err error)
 	InferIndexConfiguration(ctx context.Context, repositoryID int, commit string, bypassLimit bool) (_ *config.IndexConfiguration, hints []config.IndexJobHint, err error)
 	UpdateIndexConfigurationByRepositoryID(ctx context.Context, repositoryID int, data []byte) (err error)
+	GetInferenceScript(ctx context.Context) (script string, err error)
+	SetInferenceScript(ctx context.Context, script string) (err error)
 }
 
 type Service struct {
@@ -246,6 +248,20 @@ func (s *Service) ProcessRepoRevs(ctx context.Context, batchSize int) (err error
 	return tx.MarkRepoRevsAsProcessed(ctx, ids)
 }
 
+func (s *Service) SetInferenceScript(ctx context.Context, script string) (err error) {
+	ctx, _, endObservation := s.operations.setInferenceScript.With(ctx, &err, observation.Args{})
+	defer endObservation(1, observation.Args{})
+
+	return s.store.SetInferenceScript(ctx, script)
+}
+
+func (s *Service) GetInferenceScript(ctx context.Context) (script string, err error) {
+	ctx, _, endObservation := s.operations.getInferenceScript.With(ctx, &err, observation.Args{})
+	defer endObservation(1, observation.Args{})
+
+	return s.store.GetInferenceScript(ctx)
+}
+
 // QueueIndexes enqueues a set of index jobs for the following repository and commit. If a non-empty
 // configuration is given, it will be used to determine the set of jobs to enqueue. Otherwise, it will
 // the configuration will be determined based on the regular index scheduling rules: first read any
@@ -352,7 +368,15 @@ func (s *Service) inferIndexJobsFromRepositoryStructure(ctx context.Context, rep
 		return nil, err
 	}
 
-	indexes, err := s.inferenceService.InferIndexJobs(ctx, api.RepoName(repoName), commit, overrideScript)
+	script, err := s.store.GetInferenceScript(ctx)
+	if err != nil {
+		s.logger.Error("failed to fetch inference script from database", log.Error(err))
+	}
+	if script == "" {
+		script = overrideScript
+	}
+
+	indexes, err := s.inferenceService.InferIndexJobs(ctx, api.RepoName(repoName), commit, script)
 	if err != nil {
 		return nil, err
 	}
