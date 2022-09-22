@@ -293,13 +293,13 @@ func GeneratePipeline(c Config) (*bk.Pipeline, error) {
 		for _, dockerImage := range images.SourcegraphDockerImages {
 			publishOps.Append(publishFinalDockerImage(c, dockerImage))
 		}
-		// Executor VM image
-		if c.RunType.Is(runtype.MainBranch, runtype.TaggedRelease) {
-			publishOps.Append(publishExecutor(c, skipHashCompare))
-			if c.RunType.Is(runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorDockerRegistryMirror) {
-				publishOps.Append(publishExecutorDockerMirror(c))
-			}
-		}
+		// // Executor VM image
+		// if c.RunType.Is(runtype.MainBranch, runtype.TaggedRelease) {
+		// 	publishOps.Append(publishExecutor(c, skipHashCompare))
+		// 	if c.RunType.Is(runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorDockerRegistryMirror) {
+		// 		publishOps.Append(publishExecutorDockerMirror(c))
+		// 	}
+		// }
 		ops.Merge(publishOps)
 	}
 
