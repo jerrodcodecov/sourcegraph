@@ -258,12 +258,12 @@ func GeneratePipeline(c Config) (*bk.Pipeline, error) {
 		}
 		ops.Merge(imageBuildOps)
 
-		// Trivy security scans
-		imageScanOps := operations.NewNamedSet("Image security scans")
-		for _, dockerImage := range images.SourcegraphDockerImages {
-			imageScanOps.Append(trivyScanCandidateImage(dockerImage, c.candidateImageTag()))
-		}
-		ops.Merge(imageScanOps)
+		// // Trivy security scans
+		// imageScanOps := operations.NewNamedSet("Image security scans")
+		// for _, dockerImage := range images.SourcegraphDockerImages {
+		// 	imageScanOps.Append(trivyScanCandidateImage(dockerImage, c.candidateImageTag()))
+		// }
+		// ops.Merge(imageScanOps)
 
 		// // Core tests
 		// ops.Merge(CoreTestOperations(changed.All, CoreTestOperationsOptions{

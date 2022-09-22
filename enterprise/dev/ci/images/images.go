@@ -48,8 +48,9 @@ func maybeTaggedImage(rootImage, tag string) string {
 // - app must be a legal Docker image name (e.g. no `/`)
 //
 // The `addDockerImages` pipeline step determines what images are built and published.
-var SourcegraphDockerImages = append(DeploySourcegraphDockerImages,
-	"server", "sg")
+var SourcegraphDockerImages = append(DeploySourcegraphDockerImages)
+
+// "server", "sg"
 
 // DeploySourcegraphDockerImages denotes all Docker images that are included in a typical
 // deploy-sourcegraph installation.
@@ -57,36 +58,36 @@ var SourcegraphDockerImages = append(DeploySourcegraphDockerImages,
 // Used to cross check images in the deploy-sourcegraph repo. If you are adding or removing an image to https://github.com/sourcegraph/deploy-sourcegraph
 // it must also be added to this list.
 var DeploySourcegraphDockerImages = []string{
-	"alpine-3.14",
-	"cadvisor",
-	"codeinsights-db",
-	"codeintel-db",
-	"frontend",
-	"github-proxy",
-	"gitserver",
-	"grafana",
-	"indexed-searcher",
-	"jaeger-agent",
-	"jaeger-all-in-one",
-	"minio",
-	"postgres-12-alpine",
-	"postgres_exporter",
-	"precise-code-intel-worker",
-	"prometheus",
-	"prometheus-gcp",
-	"redis-cache",
-	"redis-store",
-	"redis_exporter",
-	"repo-updater",
-	"search-indexer",
-	"searcher",
-	"symbols",
-	"syntax-highlighter",
-	"worker",
+	// "alpine-3.14",
+	// "cadvisor",
+	// "codeinsights-db",
+	// "codeintel-db",
+	// "frontend",
+	// "github-proxy",
+	// "gitserver",
+	// "grafana",
+	// "indexed-searcher",
+	// "jaeger-agent",
+	// "jaeger-all-in-one",
+	// "minio",
+	// "postgres-12-alpine",
+	// "postgres_exporter",
+	// "precise-code-intel-worker",
+	// "prometheus",
+	// "prometheus-gcp",
+	// "redis-cache",
+	// "redis-store",
+	// "redis_exporter",
+	// "repo-updater",
+	// "search-indexer",
+	// "searcher",
+	// "symbols",
+	// "syntax-highlighter",
+	// "worker",
 	"migrator",
-	"executor",
-	"executor-vm",
-	"opentelemetry-collector",
+	// "executor",
+	// "executor-vm",
+	// "opentelemetry-collector",
 }
 
 // CandidateImageTag provides the tag for a candidate image built for this Buildkite run.
