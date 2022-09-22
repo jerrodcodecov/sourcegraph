@@ -58,6 +58,7 @@
  *  require {@link Hovercard} to update {@link activeRanges} as necessary to
  *  highlight the ranges for which hover information exists.
  */
+
 import { Extension, Facet, RangeSet, StateEffect, StateEffectType, StateField, Text } from '@codemirror/state'
 import {
     Decoration,
@@ -72,7 +73,7 @@ import {
 } from '@codemirror/view'
 import { createRoot, Root } from 'react-dom/client'
 import { combineLatest, fromEvent, Observable, Subject, Subscription } from 'rxjs'
-import { startWith, filter } from 'rxjs/operators'
+import { startWith, filter, map } from 'rxjs/operators'
 
 import { addLineRangeQueryParameter, isErrorLike, toPositionOrRangeQueryParameter } from '@sourcegraph/common'
 import { createUpdateableField } from '@sourcegraph/shared/src/components/CodeMirrorEditor'
@@ -84,6 +85,7 @@ import { BlobProps, updateBrowserHistoryIfChanged } from '../Blob'
 import { Container } from './react-interop'
 import {
     distinctWordAtCoords,
+    distinctWordAtCursor,
     offsetToUIPosition,
     preciseOffsetAtCoords,
     rangesContain,
@@ -294,13 +296,15 @@ class HovercardManager implements PluginValue {
 
         // Add new ranges
         for (const range of this.hovercardRanges) {
+            // This is where we set the hovercard
+            console.log(range)
             const key = this.toKey(range)
             if (!this.tooltips.has(key)) {
                 this.tooltips.set(key, {
                     pos: range.from,
                     end: range.to,
                     above: true,
-                    create: view => new Hovercard(view, range),
+                    create: view => new Hovercard(view, range, true),
                 })
             }
         }
@@ -355,6 +359,7 @@ export const hovercardSource = Facet.define<HovercardSource, HovercardSource>({
 class HoverManager implements PluginValue {
     private nextOffset = new Subject<number | null>()
     private subscription: Subscription
+    private otherSubscription: Subscription
 
     constructor(
         private readonly view: EditorView,
@@ -373,13 +378,35 @@ class HoverManager implements PluginValue {
                         return true
                     }
                     const ranges = view.state.field(activeRanges)
-                    return Array.from(ranges.values()).every(
+                    const result = Array.from(ranges.values()).every(
                         range => !isOffsetInHoverRange(offset, range, view.state.doc)
                     )
+                    return result
                 }),
                 distinctWordAtCoords(this.view)
             )
             .subscribe(position => {
+                this.view.dispatch({
+                    effects: this.setHovercardPosition.of(
+                        position
+                            ? {
+                                  ...position,
+                                  range: offsetToUIPosition(this.view.state.doc, position.from, position.to),
+                              }
+                            : null
+                    ),
+                })
+            })
+
+        this.otherSubscription = fromEvent<MouseEvent>(this.view.dom, 'keyup')
+            .pipe(
+                filter(event =>
+                    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes((event as KeyboardEvent).key)
+                ),
+                distinctWordAtCursor(this.view)
+            )
+            .subscribe(position => {
+                console.log('Got position', position)
                 this.view.dispatch({
                     effects: this.setHovercardPosition.of(
                         position
@@ -434,17 +461,29 @@ class Hovercard implements TooltipView {
     private props: BlobProps | null = null
     public overlap = true
     private subscription: Subscription
+    private keyboardSubscription: Observable<boolean>
     private nextPinned = new Subject<boolean>()
 
-    constructor(private readonly view: EditorView, private readonly range: HovercardRange) {
+    constructor(
+        private readonly view: EditorView,
+        private readonly range: HovercardRange,
+        private readonly triggerWithKeyboard: boolean
+    ) {
         this.dom = document.createElement('div')
+
+        this.keyboardSubscription = fromEvent<MouseEvent>(this.view.dom, 'keyup')
+            .pipe(map(event => (event as KeyboardEvent).key === 'Enter'))
+            .pipe(startWith(false))
 
         this.subscription = combineLatest([
             this.nextContainer,
             this.view.state.facet(hovercardSource)(view, range.range.start),
             this.nextProps.pipe(startWith(view.state.facet(blobPropsFacet))),
             this.nextPinned.pipe(startWith(range.pinned ?? false)),
-        ]).subscribe(([container, hovercardData, props, pinned]) => {
+            this.keyboardSubscription,
+        ]).subscribe(([container, hovercardData, props, pinned, keyTrigger]) => {
+            const shouldShow = triggerWithKeyboard ? keyTrigger : true
+
             // undefined means the data is still loading
             if (hovercardData.hoverOrError !== undefined) {
                 if (!this.root) {
@@ -452,7 +491,7 @@ class Hovercard implements TooltipView {
                     // necessary
                     this.root = createRoot(container)
                 }
-                this.render(this.root, hovercardData, props, pinned)
+                this.render(this.root, hovercardData, props, pinned, shouldShow)
             }
         })
     }
@@ -499,7 +538,8 @@ class Hovercard implements TooltipView {
         root: Root,
         { hoverOrError, actionsOrError }: HovercardData,
         props: BlobProps,
-        pinned: boolean
+        pinned: boolean,
+        show: boolean
     ): void {
         // Only render if we either have something for hover or actions. Adapted
         // from shouldRenderOverlay in codeintellify/src/hoverifier.ts
@@ -554,6 +594,10 @@ class Hovercard implements TooltipView {
             })
         } else {
             this.addRange({ onClick })
+        }
+
+        if (!show) {
+            return
         }
 
         root.render(

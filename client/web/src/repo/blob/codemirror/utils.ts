@@ -126,6 +126,48 @@ export function distinctWordAtCoords(
             if (offset === null) {
                 return null
             }
+            console.log(offset)
+
+            // Still hovering over the same word
+            if (position && position.from <= offset && position.to >= offset) {
+                return position
+            }
+
+            {
+                const word = view.state.wordAt(offset)
+                // Update position if we are hovering over a
+                // different word
+                if (word) {
+                    return { from: word.from, to: word.to }
+                }
+            }
+
+            return null
+        }, null),
+        distinctUntilChanged()
+    )
+}
+
+export function distinctWordAtCursor(
+    view: EditorView
+): OperatorFunction<{ x: number; y: number }, { from: number; to: number } | null> {
+    return pipe(
+        scan((position: { from: number; to: number } | null, coords) => {
+            const selected = window.getSelection()
+            if (!selected) {
+                return false
+            }
+
+            const [range] = selected.getRangeAt(0).getClientRects()
+            if (!range) {
+                return null
+            }
+
+            const offset = preciseOffsetAtCoords(view, { x: range.x, y: range.y })
+
+            if (offset === null) {
+                return null
+            }
 
             // Still hovering over the same word
             if (position && position.from <= offset && position.to >= offset) {

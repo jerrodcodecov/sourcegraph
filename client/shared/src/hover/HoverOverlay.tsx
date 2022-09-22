@@ -212,6 +212,7 @@ export const HoverOverlay: React.FunctionComponent<React.PropsWithChildren<Hover
                                 {actionsOrError.map((action, index) => (
                                     <ActionItem
                                         key={index}
+                                        tabIndex={0}
                                         {...action}
                                         className={classNames(
                                             hoverOverlayStyle.action,

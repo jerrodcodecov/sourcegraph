@@ -14,7 +14,7 @@ import { StatusBarItemWithKey } from '@sourcegraph/shared/src/api/extension/api/
 import { haveInitialExtensionsLoaded } from '@sourcegraph/shared/src/api/features'
 import { syncRemoteSubscription } from '@sourcegraph/shared/src/api/util'
 import { RequiredExtensionsControllerProps } from '@sourcegraph/shared/src/extensions/controller'
-import { Badge, Button, useObservable, Link, ButtonLink, Icon, Tooltip } from '@sourcegraph/wildcard'
+import { Button, useObservable, ButtonLink, Icon, Tooltip } from '@sourcegraph/wildcard'
 
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { useCarousel } from '../../components/useCarousel'
@@ -171,7 +171,8 @@ export const StatusBar: React.FunctionComponent<React.PropsWithChildren<StatusBa
                         <Icon aria-hidden={true} svgPath={mdiChevronLeft} />
                     </Button>
                 )}
-                <div className={classNames('d-flex align-items-center px-2', styles.items)} ref={carouselReference}>
+                {/* TODO: This shouldn't really be showing now anyway */}
+                {/* <div className={classNames('d-flex align-items-center px-2', styles.items)} ref={carouselReference}>
                     {badgeText && (
                         <Badge variant="secondary" className="m-0" as="p">
                             {badgeText}
@@ -190,14 +191,14 @@ export const StatusBar: React.FunctionComponent<React.PropsWithChildren<StatusBa
                         : hasEnoughTimePassed && (
                               <div className={classNames('ml-2', styles.item)}>
                                   <small className="text-muted">
-                                      No information from extensions available.{' '}
+                                      No eeeeee from extensions available.{' '}
                                       <Link to="/extensions">
                                           Find extensions in the Sourcegraph extension registry
                                       </Link>
                                   </small>
                               </div>
                           )}
-                </div>
+                </div> */}
                 {canScrollPositive && (
                     <Button
                         className={classNames('border-0', styles.scroll)}
