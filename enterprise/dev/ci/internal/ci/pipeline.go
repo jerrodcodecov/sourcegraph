@@ -234,9 +234,9 @@ func GeneratePipeline(c Config) (*bk.Pipeline, error) {
 		)
 
 	default:
-		// Slow async pipeline
-		ops.Merge(operations.NewNamedSet(operations.PipelineSetupSetName,
-			triggerAsync(buildOptions)))
+		// // Slow async pipeline
+		// ops.Merge(operations.NewNamedSet(operations.PipelineSetupSetName,
+		// 	triggerAsync(buildOptions)))
 
 		// Slow image builds
 		imageBuildOps := operations.NewNamedSet("Image builds")
@@ -248,42 +248,42 @@ func GeneratePipeline(c Config) (*bk.Pipeline, error) {
 			}
 			imageBuildOps.Append(buildCandidateDockerImage(dockerImage, c.Version, c.candidateImageTag(), uploadSourcemaps))
 		}
-		// Executor VM image
-		skipHashCompare := c.MessageFlags.SkipHashCompare || c.RunType.Is(runtype.ReleaseBranch, runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorVMImage)
-		if c.RunType.Is(runtype.MainDryRun, runtype.MainBranch, runtype.ReleaseBranch, runtype.TaggedRelease) {
-			imageBuildOps.Append(buildExecutor(c, skipHashCompare))
-			if c.RunType.Is(runtype.ReleaseBranch, runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorDockerRegistryMirror) {
-				imageBuildOps.Append(buildExecutorDockerMirror(c))
-			}
-		}
-		ops.Merge(imageBuildOps)
+		// // Executor VM image
+		// skipHashCompare := c.MessageFlags.SkipHashCompare || c.RunType.Is(runtype.ReleaseBranch, runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorVMImage)
+		// if c.RunType.Is(runtype.MainDryRun, runtype.MainBranch, runtype.ReleaseBranch, runtype.TaggedRelease) {
+		// 	imageBuildOps.Append(buildExecutor(c, skipHashCompare))
+		// 	if c.RunType.Is(runtype.ReleaseBranch, runtype.TaggedRelease) || c.Diff.Has(changed.ExecutorDockerRegistryMirror) {
+		// 		imageBuildOps.Append(buildExecutorDockerMirror(c))
+		// 	}
+		// }
+		// ops.Merge(imageBuildOps)
 
-		// Trivy security scans
-		imageScanOps := operations.NewNamedSet("Image security scans")
-		for _, dockerImage := range images.SourcegraphDockerImages {
-			imageScanOps.Append(trivyScanCandidateImage(dockerImage, c.candidateImageTag()))
-		}
-		ops.Merge(imageScanOps)
+		// // Trivy security scans
+		// imageScanOps := operations.NewNamedSet("Image security scans")
+		// for _, dockerImage := range images.SourcegraphDockerImages {
+		// 	imageScanOps.Append(trivyScanCandidateImage(dockerImage, c.candidateImageTag()))
+		// }
+		// ops.Merge(imageScanOps)
 
-		// Core tests
-		ops.Merge(CoreTestOperations(changed.All, CoreTestOperationsOptions{
-			ChromaticShouldAutoAccept: c.RunType.Is(runtype.MainBranch),
-			MinimumUpgradeableVersion: minimumUpgradeableVersion,
-			ForceReadyForReview:       c.MessageFlags.ForceReadyForReview,
-		}))
+		// // Core tests
+		// ops.Merge(CoreTestOperations(changed.All, CoreTestOperationsOptions{
+		// 	ChromaticShouldAutoAccept: c.RunType.Is(runtype.MainBranch),
+		// 	MinimumUpgradeableVersion: minimumUpgradeableVersion,
+		// 	ForceReadyForReview:       c.MessageFlags.ForceReadyForReview,
+		// }))
 
-		// Integration tests
-		ops.Merge(operations.NewNamedSet("Integration tests",
-			backendIntegrationTests(c.candidateImageTag()),
-			codeIntelQA(c.candidateImageTag()),
-		))
-		// End-to-end tests
-		ops.Merge(operations.NewNamedSet("End-to-end tests",
-			serverE2E(c.candidateImageTag()),
-			serverQA(c.candidateImageTag()),
-			clusterQA(c.candidateImageTag()),
-			testUpgrade(c.candidateImageTag(), minimumUpgradeableVersion),
-		))
+		// // Integration tests
+		// ops.Merge(operations.NewNamedSet("Integration tests",
+		// 	backendIntegrationTests(c.candidateImageTag()),
+		// 	codeIntelQA(c.candidateImageTag()),
+		// ))
+		// // End-to-end tests
+		// ops.Merge(operations.NewNamedSet("End-to-end tests",
+		// 	serverE2E(c.candidateImageTag()),
+		// 	serverQA(c.candidateImageTag()),
+		// 	clusterQA(c.candidateImageTag()),
+		// 	testUpgrade(c.candidateImageTag(), minimumUpgradeableVersion),
+		// ))
 
 		// All operations before this point are required
 		ops.Append(wait)
