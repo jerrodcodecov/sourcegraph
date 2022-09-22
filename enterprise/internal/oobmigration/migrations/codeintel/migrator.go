@@ -247,6 +247,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		return err
 	}
 	if !ok {
+		fmt.Printf("No dump, skipping\n")
 		return nil
 	}
 
@@ -398,6 +399,7 @@ func (m *migrator) processRows(ctx context.Context, tx *basestore.Store, dumpID,
 			return nil, err
 		}
 
+		fmt.Printf("ROW VALUES: %v\n", values)
 		rowValues <- values
 	}
 
@@ -444,7 +446,7 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		dumpID,
 		sqlf.Join(m.updateConditions, " AND "),
 	)
-	fmt.Printf("> UPDATING BATCH\n%s\n\n>> %v\n\n", q.Query(sqlf.PostgresBindVar), q.Args())
+	fmt.Printf("> UPDATING BATCH FOR DUMP %d\n%s\n\n>> %v\n\n", dumpID, q.Query(sqlf.PostgresBindVar), q.Args())
 
 	// Note that we assign a parameterized dump identifier and schema version here since
 	// both values are the same for all rows in this operation.
