@@ -201,9 +201,9 @@ SELECT CASE c2.count WHEN 0 THEN 1 ELSE cast(c1.count as float) / cast(c2.count 
 // enclosing transaction.
 func (m *migrator) Up(ctx context.Context) (err error) {
 	g := group.New().WithErrors()
-	for i := 0; i < m.options.numRoutines; i++ {
-		g.Go(func() error { return m.up(ctx) })
-	}
+	// for i := 0; i < m.options.numRoutines; i++ {
+	g.Go(func() error { return m.up(ctx) })
+	// }
 
 	return g.Wait()
 }
@@ -237,8 +237,8 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 	}
 	defer func() {
 		err = tx.Done(err)
-		if err == nil {
-			fmt.Printf("COMMITTED!!!\n")
+		if err != nil {
+			fmt.Printf("FAILED TO COMMIT!!!\n")
 		}
 	}()
 
@@ -247,7 +247,6 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		return err
 	}
 	if !ok {
-		fmt.Printf("No dump, skipping\n")
 		return nil
 	}
 
@@ -399,7 +398,7 @@ func (m *migrator) processRows(ctx context.Context, tx *basestore.Store, dumpID,
 			return nil, err
 		}
 
-		fmt.Printf("ROW VALUES: %v\n", values)
+		fmt.Printf("ROW VALUES FOR %d: %v\n", dumpID, values)
 		rowValues <- values
 	}
 
@@ -450,9 +449,12 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 
 	// Note that we assign a parameterized dump identifier and schema version here since
 	// both values are the same for all rows in this operation.
-	if err := tx.Exec(ctx, q); err != nil {
+	count, _, err := basestore.ScanFirstInt(tx.Query(ctx, q))
+	if err != nil {
 		return err
 	}
+
+	fmt.Printf("> UPDATED %d ROWS FOR DUMP %d\n", count, dumpID)
 
 	return nil
 }
@@ -464,5 +466,5 @@ CREATE TEMPORARY TABLE %s (%s) ON COMMIT DROP
 
 const updateBatchUpdateQuery = `
 -- source: enterprise/internal/oobmigrations/migrations/codeintel/migrator.go:updateBatch
-UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s
+WITH upd AS (UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s) SELECT COUNT(*) FROM upd
 `
