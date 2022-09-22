@@ -235,7 +235,12 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 	if err != nil {
 		return err
 	}
-	defer func() { err = tx.Done(err) }()
+	defer func() {
+		err = tx.Done(err)
+		if err == nil {
+			fmt.Printf("COMMITTED!!!\n")
+		}
+	}()
 
 	dumpID, ok, err := m.selectAndLockDump(ctx, tx, sourceVersion)
 	if err != nil {
@@ -430,18 +435,7 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		return err
 	}
 
-	fmt.Printf(">>> %#+v", map[string]any{
-		"tableName":             sqlf.Sprintf(m.options.tableName),
-		"updateAssignments":     sqlf.Join(m.updateAssignments, ", "),
-		"targetVersion":         targetVersion,
-		"dumpID":                dumpID,
-		"updateConditionsQuery": sqlf.Join(m.updateConditions, " AND ").Query(sqlf.PostgresBindVar),
-		"updateConditionsArgs":  sqlf.Join(m.updateConditions, " AND ").Args(),
-	})
-
-	// Note that we assign a parameterized dump identifier and schema version here since
-	// both values are the same for all rows in this operation.
-	if err := tx.Exec(ctx, sqlf.Sprintf(
+	q := sqlf.Sprintf(
 		updateBatchUpdateQuery,
 		sqlf.Sprintf(m.options.tableName),
 		sqlf.Join(m.updateAssignments, ", "),
@@ -449,7 +443,12 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		temporaryTableExpression,
 		dumpID,
 		sqlf.Join(m.updateConditions, " AND "),
-	)); err != nil {
+	)
+	fmt.Printf("> UPDATING BATCH\n%s\n\n>> %v\n\n", q.Query(sqlf.PostgresBindVar), q.Args())
+
+	// Note that we assign a parameterized dump identifier and schema version here since
+	// both values are the same for all rows in this operation.
+	if err := tx.Exec(ctx, q); err != nil {
 		return err
 	}
 
