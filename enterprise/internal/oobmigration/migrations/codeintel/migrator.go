@@ -2,6 +2,7 @@ package codeintel
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -244,6 +245,8 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		return nil
 	}
 
+	fmt.Printf("SELECTED DUMP %d\n", dumpID)
+
 	rowValues, err := m.processRows(ctx, tx, dumpID, sourceVersion, driverFunc)
 	if err != nil {
 		return err
@@ -277,6 +280,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 			return err
 		}
 
+		fmt.Printf(">>> rowsUpserted=%d, rowsDeleted=%d\n\n", rowsUpserted, rowsDeleted)
 		// do nothing with these values for now
 	}
 
@@ -425,6 +429,15 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 	); err != nil {
 		return err
 	}
+
+	fmt.Printf(">>> %#+v", map[string]any{
+		"tableName":             sqlf.Sprintf(m.options.tableName),
+		"updateAssignments":     sqlf.Join(m.updateAssignments, ", "),
+		"targetVersion":         targetVersion,
+		"dumpID":                dumpID,
+		"updateConditionsQuery": sqlf.Join(m.updateConditions, " AND ").Query(sqlf.PostgresBindVar),
+		"updateConditionsArgs":  sqlf.Join(m.updateConditions, " AND ").Args(),
+	})
 
 	// Note that we assign a parameterized dump identifier and schema version here since
 	// both values are the same for all rows in this operation.
