@@ -459,6 +459,18 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		_ = rows.Close()
 	}
 
+	fmt.Printf("IDENTS:\n")
+	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT r.scheme, r.identifier FROM lsif_data_references r join t_migration_payload p on p.scheme=r.scheme and p.identifier=r.identifier`)); err == nil {
+		var a, b string
+		for rows.Next() {
+			if err := rows.Scan(&a, &b); err == nil {
+				fmt.Printf("JOINED ROW: %s %s\n", a, b)
+			}
+		}
+		_ = rows.Err()
+		_ = rows.Close()
+	}
+
 	q := sqlf.Sprintf(
 		updateBatchUpdateQuery,
 		sqlf.Sprintf(m.options.tableName),
