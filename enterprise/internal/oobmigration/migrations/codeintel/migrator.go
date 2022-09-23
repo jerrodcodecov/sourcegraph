@@ -463,10 +463,14 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 	}
 
 	fmt.Printf("IDENTS:\n")
-	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT r.scheme, r.identifier FROM lsif_data_references r join t_migration_payload p on
-	to_ascii(p.scheme)=to_ascii(r.scheme) and
-	to_ascii(p.identifier)=to_ascii(r.identifier)
-	`)); err == nil {
+	if rows, err := tx.Query(ctx, sqlf.Sprintf(`
+		SELECT r.scheme, r.identifier
+		FROM lsif_data_references r
+		JOIN t_migration_payload p
+		ON
+			p.scheme = r.scheme and
+			p.identifier = r.identifier
+ 	`)); err == nil {
 		var a, b string
 		for rows.Next() {
 			if err := rows.Scan(&a, &b); err == nil {
