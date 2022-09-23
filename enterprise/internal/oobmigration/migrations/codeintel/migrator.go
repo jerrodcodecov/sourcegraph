@@ -428,11 +428,14 @@ var temporaryTableExpression = sqlf.Sprintf(temporaryTableName)
 // fields. Then, the given row values are bulk inserted into the temporary table. Finally, the rows in
 // the temporary table are used to update the target table.
 func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID, targetVersion int, rowValues <-chan []any) error {
-	if err := tx.Exec(ctx, sqlf.Sprintf(
+	q1 := sqlf.Sprintf(
 		updateBatchTemporaryTableQuery,
 		temporaryTableExpression,
 		sqlf.Join(m.temporaryTableFieldSpecs, ", "),
-	)); err != nil {
+	)
+	fmt.Printf("> CREATING TABLE %d\n%s\n>> %v\n", dumpID, qq.Query(sqlf.PostgresBindVar), qq.Args())
+
+	if err := tx.Exec(ctx, q1); err != nil {
 		return err
 	}
 
@@ -460,7 +463,10 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 	}
 
 	fmt.Printf("IDENTS:\n")
-	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT r.scheme, r.identifier FROM lsif_data_references r join t_migration_payload p on p.scheme=r.scheme and p.identifier=r.identifier`)); err == nil {
+	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT r.scheme, r.identifier FROM lsif_data_references r join t_migration_payload p on
+	to_ascii(p.scheme)=to_ascii(r.scheme) and
+	to_ascii(p.identifier)=to_ascii(r.identifier)
+	`)); err == nil {
 		var a, b string
 		for rows.Next() {
 			if err := rows.Scan(&a, &b); err == nil {
