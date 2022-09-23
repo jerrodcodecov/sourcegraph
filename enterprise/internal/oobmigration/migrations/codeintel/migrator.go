@@ -462,19 +462,20 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		_ = rows.Close()
 	}
 
-	fmt.Printf("IDENTS:\n")
+	fmt.Printf("JOINS?:\n")
 	if rows, err := tx.Query(ctx, sqlf.Sprintf(`
 		SELECT r.scheme, r.identifier
 		FROM lsif_data_references r
 		JOIN t_migration_payload p
 		ON
 			p.scheme = r.scheme and
-			p.identifier = r.identifier
- 	`)); err == nil {
+			p.identifier = r.identifier and
+			r.dump_id = %d
+ 	`, dumpID)); err == nil {
 		var a, b string
 		for rows.Next() {
 			if err := rows.Scan(&a, &b); err == nil {
-				fmt.Printf("JOINED ROW: %s %s\n", a, b)
+				fmt.Printf("JOINED: %s %s\n", a, b)
 			}
 		}
 		_ = rows.Err()
