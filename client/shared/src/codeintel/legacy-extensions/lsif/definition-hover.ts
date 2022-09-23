@@ -117,7 +117,7 @@ export function definitionAndHoverResponseToLocations(
     }
 
     return {
-        definition: lsifObject.definitions?.nodes.map(node => nodeToLocation(textDocument, node)) || null,
+        definition: lsifObject.definitions?.nodes.map(node => nodeToLocation(textDocument.uri, node)) || null,
         hover: lsifObject.hover ? hoverPayloadToHover(lsifObject?.hover) : null,
     }
 }

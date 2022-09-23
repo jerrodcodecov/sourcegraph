@@ -21,6 +21,7 @@ import { parseQueryAndHash, UIPositionSpec } from '@sourcegraph/shared/src/util/
 import { BlobInfo, BlobProps, updateBrowserHistoryIfChanged } from './Blob'
 import { blobPropsFacet } from './codemirror'
 import { showGitBlameDecorations } from './codemirror/blame-decorations'
+import { keyboardNavigation } from './codemirror/focus'
 import { syntaxHighlight } from './codemirror/highlight'
 import { hovercardRanges } from './codemirror/hovercard'
 import { selectLines, selectableLineNumbers, SelectedLineRange } from './codemirror/linenumbers'
@@ -29,7 +30,7 @@ import { isValidLineRange, offsetToUIPosition, uiPositionToOffset } from './code
 
 const staticExtensions: Extension = [
     EditorState.readOnly.of(true),
-    EditorView.editable.of(true),
+    EditorView.editable.of(false),
     EditorView.contentAttributes.of({
         // This is required to make the blob view focusable and to make
         // triggering the in-document search (see below) work when Mod-f is
@@ -87,6 +88,7 @@ export const Blob: React.FunctionComponent<BlobProps> = props => {
         location,
         history,
         blameHunks,
+        tokenRanges,
 
         // Reference panel specific props
         disableStatusBar,
@@ -160,6 +162,7 @@ export const Blob: React.FunctionComponent<BlobProps> = props => {
                 navigateToLineOnAnyClick: navigateToLineOnAnyClick ?? false,
             }),
             syntaxHighlight.of(blobInfo),
+            keyboardNavigation.of(tokenRanges),
             pinnedRangeField.init(() => (hasPin ? position : null)),
             extensionsController !== null && !navigateToLineOnAnyClick
                 ? sourcegraphExtensions({
@@ -179,7 +182,7 @@ export const Blob: React.FunctionComponent<BlobProps> = props => {
         // further below. However they are still needed here because we need to
         // set initial values when we re-initialize the editor.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [onSelection, blobInfo, extensionsController, disableStatusBar, disableDecorations]
+        [onSelection, blobInfo, tokenRanges, extensionsController, disableStatusBar, disableDecorations]
     )
 
     const editor = useCodeMirror(container, blobInfo.content, extensions, {

@@ -19,6 +19,10 @@ import {
 } from '@sourcegraph/observability-client'
 import { SearchContextProps } from '@sourcegraph/search'
 import { StreamingSearchResultsListProps } from '@sourcegraph/search-ui'
+import {
+    CodeIntelligenceRange,
+    rangesInRangeWindow,
+} from '@sourcegraph/shared/src/codeintel/legacy-extensions/lsif/ranges'
 import { ExtensionsControllerProps } from '@sourcegraph/shared/src/extensions/controller'
 import { HighlightResponseFormat, Scalars } from '@sourcegraph/shared/src/graphql-operations'
 import { PlatformContextProps } from '@sourcegraph/shared/src/platform/context'
@@ -26,7 +30,7 @@ import { SettingsCascadeProps } from '@sourcegraph/shared/src/settings/settings'
 import { TelemetryProps } from '@sourcegraph/shared/src/telemetry/telemetryService'
 import { ThemeProps } from '@sourcegraph/shared/src/theme'
 import { lazyComponent } from '@sourcegraph/shared/src/util/lazyComponent'
-import { RepoFile, ModeSpec, parseQueryAndHash } from '@sourcegraph/shared/src/util/url'
+import { RepoFile, ModeSpec, parseQueryAndHash, makeRepoURI } from '@sourcegraph/shared/src/util/url'
 import { Alert, Button, LoadingSpinner, useEventObservable, useObservable } from '@sourcegraph/wildcard'
 
 import { AuthenticatedUser } from '../../auth'
@@ -97,6 +101,7 @@ interface BlobPageInfo extends Optional<BlobInfo, 'commitID'> {
 export const BlobPage: React.FunctionComponent<React.PropsWithChildren<BlobPageProps>> = props => {
     const { span } = useCurrentSpan()
     const [wrapCode, setWrapCode] = useState(ToggleLineWrap.getValue())
+    const [tokenRanges, setTokenRanges] = useState<CodeIntelligenceRange[] | null>(null)
     let renderMode = getModeFromURL(props.location)
     const { repoName, revision, repoID, commitID, filePath, isLightTheme, useBreadcrumb, mode } = props
     const showSearchNotebook = useExperimentalFeatures(features => features.showSearchNotebook)
@@ -257,6 +262,20 @@ export const BlobPage: React.FunctionComponent<React.PropsWithChildren<BlobPageP
             [repoName, revision, filePath, mode, enableCodeMirror]
         )
     )
+
+    useEffect(() => {
+        const fetchTokens = async (): Promise<void> => {
+            const uri = makeRepoURI({
+                repoName,
+                revision,
+                filePath,
+            })
+            const result = await rangesInRangeWindow(uri, 0, 500, false)
+            setTokenRanges(result)
+        }
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        fetchTokens()
+    }, [filePath, repoName, revision])
 
     const blobInfoOrError = enableLazyBlobSyntaxHighlighting
         ? // Fallback to formatted blob whilst we do not have the highlighted blob
@@ -483,6 +502,7 @@ export const BlobPage: React.FunctionComponent<React.PropsWithChildren<BlobPageP
                         ariaLabel="File blob"
                         isBlameVisible={isBlameVisible}
                         blameHunks={blameDecorations}
+                        tokenRanges={tokenRanges}
                     />
                 </TraceSpanProvider>
             )}

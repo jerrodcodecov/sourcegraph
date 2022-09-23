@@ -167,7 +167,7 @@ export async function findOverlappingWindows(
     // requests while the user hovers over another token while the original range
     // request is still in-flight.
 
-    const ranges = rangesInRangeWindow(textDocument, startLine, endLine, hasImplementationsField, queryGraphQL)
+    const ranges = rangesInRangeWindow(textDocument.uri, startLine, endLine, hasImplementationsField, queryGraphQL)
     rangeWindows.splice(index + 1, 0, { startLine, endLine, ranges })
 
     // Caching a promise is tricky when the promise may not resolve successfully. In
@@ -339,18 +339,15 @@ const rangesQuery = (hasImplementationsField: boolean): string => {
 
 /** Retrieve local (same-bundle) code intelligence for symbols between the given lines. */
 export async function rangesInRangeWindow(
-    textDocument: sourcegraph.TextDocument,
+    uri: string,
     startLine: number,
     endLine: number,
     hasImplementationsField: boolean,
     queryGraphQL: QueryGraphQLFn<GenericLSIFResponse<RangesResponse | null>> = sgQueryGraphQL
 ): Promise<CodeIntelligenceRange[] | null> {
     return rangesResponseToCodeIntelligenceRangeNodes(
-        textDocument,
-        await queryLSIF(
-            { query: rangesQuery(hasImplementationsField), uri: textDocument.uri, startLine, endLine },
-            queryGraphQL
-        )
+        uri,
+        await queryLSIF({ query: rangesQuery(hasImplementationsField), uri, startLine, endLine }, queryGraphQL)
     )
 }
 
@@ -373,10 +370,10 @@ export interface CodeIntelligenceRangeConnectionNode {
  * @param lsifObject The resolved LSIF object.
  */
 export function rangesResponseToCodeIntelligenceRangeNodes(
-    textDocument: sourcegraph.TextDocument,
+    uri: string,
     lsifObject: RangesResponse | null
 ): CodeIntelligenceRange[] | null {
-    return lsifObject?.ranges.nodes.map(node => nodeToCodeIntelligenceRange(textDocument, node)) || null
+    return lsifObject?.ranges.nodes.map(node => nodeToCodeIntelligenceRange(uri, node)) || null
 }
 
 /**
@@ -386,15 +383,15 @@ export function rangesResponseToCodeIntelligenceRangeNodes(
  * @param node A code intelligence range connection node.
  */
 export function nodeToCodeIntelligenceRange(
-    textDocument: sourcegraph.TextDocument,
+    uri: string,
     { range, definitions, references, implementations, hover }: CodeIntelligenceRangeConnectionNode
 ): CodeIntelligenceRange {
     return {
         range,
-        definitions: definitions && lazyValue(() => definitions.nodes.map(node => nodeToLocation(textDocument, node))),
-        references: references && lazyValue(() => references.nodes.map(node => nodeToLocation(textDocument, node))),
+        definitions: definitions && lazyValue(() => definitions.nodes.map(node => nodeToLocation(uri, node))),
+        references: references && lazyValue(() => references.nodes.map(node => nodeToLocation(uri, node))),
         implementations:
-            implementations && lazyValue(() => implementations.nodes.map(node => nodeToLocation(textDocument, node))),
+            implementations && lazyValue(() => implementations.nodes.map(node => nodeToLocation(uri, node))),
         hover,
     }
 }

@@ -20,10 +20,10 @@ export interface LocationConnectionNode {
  * @param node A location connection node.
  */
 export function nodeToLocation(
-    textDocument: sourcegraph.TextDocument,
+    uri: string,
     { resource: { repository, commit, path }, range }: LocationConnectionNode
 ): sourcegraph.Location {
-    const { repo: currentRepo, commit: currentCommit } = parseGitURI(new URL(textDocument.uri))
+    const { repo: currentRepo, commit: currentCommit } = parseGitURI(new URL(uri))
 
     return {
         uri: new URL(`git://${repository?.name || currentRepo}?${commit?.oid || currentCommit}#${path}`),

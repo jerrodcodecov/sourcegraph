@@ -61,6 +61,7 @@ import { FlatExtensionHostAPI } from '@sourcegraph/shared/src/api/contract'
 import { groupDecorationsByLine } from '@sourcegraph/shared/src/api/extension/api/decorations'
 import { haveInitialExtensionsLoaded } from '@sourcegraph/shared/src/api/features'
 import { ViewerId } from '@sourcegraph/shared/src/api/viewerTypes'
+import { CodeIntelligenceRange } from '@sourcegraph/shared/src/codeintel/legacy-extensions/lsif/ranges'
 import { ExtensionsControllerProps } from '@sourcegraph/shared/src/extensions/controller'
 import { getHoverActions } from '@sourcegraph/shared/src/hover/actions'
 import { HoverContext, PinOptions } from '@sourcegraph/shared/src/hover/HoverOverlay'
@@ -129,6 +130,8 @@ export interface BlobProps
 
     isBlameVisible?: boolean
     blameHunks?: BlameHunk[]
+
+    tokenRanges: CodeIntelligenceRange[] | null
 }
 
 export interface BlobInfo extends AbsoluteRepoFile, ModeSpec {
