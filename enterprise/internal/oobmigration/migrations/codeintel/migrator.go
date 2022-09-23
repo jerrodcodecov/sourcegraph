@@ -242,6 +242,22 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		}
 	}()
 
+	cb, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1")))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == nil {
+			if ca, _, queryErr := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1"))); queryErr != nil {
+				err = queryErr
+			} else {
+				fmt.Printf("COUNT BEFORE: %d\nCOUNT AFTER: %d\n", cb, ca)
+			}
+		}
+	}()
+
+	fmt.Printf("SOURCE VERSION: %d\nTARGET VERSION: %d\n\n", sourceVersion, targetVersion)
+
 	dumpID, ok, err := m.selectAndLockDump(ctx, tx, sourceVersion)
 	if err != nil {
 		return err
