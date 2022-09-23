@@ -235,12 +235,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 	if err != nil {
 		return err
 	}
-	defer func() {
-		err = tx.Done(err)
-		if err != nil {
-			fmt.Printf("FAILED TO COMMIT!!!\n")
-		}
-	}()
+	defer func() { err = tx.Done(err) }()
 
 	cb, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1")))
 	if err != nil {
@@ -256,7 +251,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		}
 	}()
 
-	fmt.Printf("SOURCE VERSION: %d\nTARGET VERSION: %d\n\n", sourceVersion, targetVersion)
+	fmt.Printf("SOURCE VERSION: %d\nTARGET VERSION: %d\n", sourceVersion, targetVersion)
 
 	dumpID, ok, err := m.selectAndLockDump(ctx, tx, sourceVersion)
 	if err != nil {
@@ -301,7 +296,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 			return err
 		}
 
-		fmt.Printf(">>> rowsUpserted=%d, rowsDeleted=%d\n\n", rowsUpserted, rowsDeleted)
+		fmt.Printf("> rowsUpserted=%d, rowsDeleted=%d\n", rowsUpserted, rowsDeleted)
 		// do nothing with these values for now
 	}
 
@@ -467,16 +462,19 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		dumpID,
 		sqlf.Join(m.updateConditions, " AND "),
 	)
-	fmt.Printf("> UPDATING BATCH FOR DUMP %d\n%s\n\n>> %v\n\n", dumpID, q.Query(sqlf.PostgresBindVar), q.Args())
+	fmt.Printf("> UPDATING BATCH FOR DUMP %d\n%s\n>> %v\n", dumpID, q.Query(sqlf.PostgresBindVar), q.Args())
 
 	// Note that we assign a parameterized dump identifier and schema version here since
 	// both values are the same for all rows in this operation.
-	count, _, err := basestore.ScanFirstInt(tx.Query(ctx, q))
+	rows, err := tx.ExecResult(ctx, q)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("> UPDATED %d ROWS FOR DUMP %d\n", count, dumpID)
+	rowsAffected, err := rows.RowsAffected()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Rows affected: %d\n", rowsAffected)
 
 	return nil
 }
@@ -488,5 +486,5 @@ CREATE TEMPORARY TABLE %s (%s) ON COMMIT DROP
 
 const updateBatchUpdateQuery = `
 -- source: enterprise/internal/oobmigrations/migrations/codeintel/migrator.go:updateBatch
-WITH upd AS (UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s RETURNING 1) SELECT COUNT(*) FROM upd
+UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s
 `
