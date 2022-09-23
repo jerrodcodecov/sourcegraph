@@ -447,11 +447,17 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		return err
 	}
 
-	valueCount, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf(`SELECT COUNT(*) FROM %s`, temporaryTableExpression)))
-	if err != nil {
-		return err
+	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT scheme, identifier, num_locations FROM t_migration_payload`)); err == nil {
+		var a, b string
+		var c int
+		for rows.Next() {
+			if err := rows.Scan(&a, &b, &c); err == nil {
+				fmt.Printf("TEMP TABLE ROW: %s %s %d\n", a, b, c)
+			}
+		}
+		_ = rows.Err()
+		_ = rows.Close()
 	}
-	fmt.Printf("NUM INSERTED: %d\n", valueCount)
 
 	q := sqlf.Sprintf(
 		updateBatchUpdateQuery,
