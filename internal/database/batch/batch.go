@@ -220,7 +220,7 @@ func (i *Inserter) Flush(ctx context.Context) (err error) {
 	// generally be the full querySuffix string, except for the last call to Flush which
 	// may be a partial batch.
 	q := i.makeQuery(len(batch))
-	fmt.Printf("BULK INSERTION: %v %v\n", q, batch)
+	// fmt.Printf("BULK INSERTION: %v %v\n", q, batch)
 	rows, err := i.db.QueryContext(dbconn.WithBulkInsertion(ctx, true), q, batch...)
 	if err != nil {
 		return err

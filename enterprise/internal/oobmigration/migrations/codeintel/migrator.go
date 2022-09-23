@@ -237,21 +237,21 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 	}
 	defer func() { err = tx.Done(err) }()
 
-	cb, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1")))
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err == nil {
-			if ca, _, queryErr := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1"))); queryErr != nil {
-				err = queryErr
-			} else {
-				fmt.Printf("COUNT BEFORE: %d\nCOUNT AFTER: %d\n", cb, ca)
-			}
-		}
-	}()
+	// cb, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1")))
+	// if err != nil {
+	// 	return err
+	// }
+	// defer func() {
+	// 	if err == nil {
+	// 		if ca, _, queryErr := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf("SELECT COUNT(*) FROM lsif_data_references WHERE schema_version = 1"))); queryErr != nil {
+	// 			err = queryErr
+	// 		} else {
+	// 			fmt.Printf("COUNT BEFORE: %d\nCOUNT AFTER: %d\n", cb, ca)
+	// 		}
+	// 	}
+	// }()
 
-	fmt.Printf("SOURCE VERSION: %d\nTARGET VERSION: %d\n", sourceVersion, targetVersion)
+	// fmt.Printf("SOURCE VERSION: %d\nTARGET VERSION: %d\n", sourceVersion, targetVersion)
 
 	dumpID, ok, err := m.selectAndLockDump(ctx, tx, sourceVersion)
 	if err != nil {
@@ -261,7 +261,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 		return nil
 	}
 
-	fmt.Printf("SELECTED DUMP %d\n", dumpID)
+	// fmt.Printf("SELECTED DUMP %d\n", dumpID)
 
 	rowValues, err := m.processRows(ctx, tx, dumpID, sourceVersion, driverFunc)
 	if err != nil {
@@ -296,7 +296,7 @@ func (m *migrator) run(ctx context.Context, sourceVersion, targetVersion int, dr
 			return err
 		}
 
-		fmt.Printf("> rowsUpserted=%d, rowsDeleted=%d\n", rowsUpserted, rowsDeleted)
+		// fmt.Printf("> rowsUpserted=%d, rowsDeleted=%d\n", rowsUpserted, rowsDeleted)
 		// do nothing with these values for now
 	}
 
@@ -409,7 +409,7 @@ func (m *migrator) processRows(ctx context.Context, tx *basestore.Store, dumpID,
 			return nil, err
 		}
 
-		fmt.Printf("ROW VALUES FOR %d: %v\n", dumpID, values)
+		// fmt.Printf("ROW VALUES FOR %d: %v\n", dumpID, values)
 		rowValues <- values
 	}
 
@@ -433,7 +433,7 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		temporaryTableExpression,
 		sqlf.Join(m.temporaryTableFieldSpecs, ", "),
 	)
-	fmt.Printf("> CREATING TABLE %d\n%s\n>> %v\n", dumpID, q1.Query(sqlf.PostgresBindVar), q1.Args())
+	// fmt.Printf("> CREATING TABLE %d\n%s\n>> %v\n", dumpID, q1.Query(sqlf.PostgresBindVar), q1.Args())
 
 	if err := tx.Exec(ctx, q1); err != nil {
 		return err
@@ -455,32 +455,49 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		var c int
 		for rows.Next() {
 			if err := rows.Scan(&a, &b, &c); err == nil {
-				fmt.Printf("TEMP TABLE ROW: %s %s %d\n", a, b, c)
+				fmt.Printf("TEMP TABLE VALUES: %s %s %d\n", a, b, c)
 			}
 		}
 		_ = rows.Err()
 		_ = rows.Close()
 	}
 
-	fmt.Printf("JOINS?:\n")
-	if rows, err := tx.Query(ctx, sqlf.Sprintf(`
-		SELECT r.scheme, r.identifier
-		FROM lsif_data_references r
-		JOIN t_migration_payload p
-		ON
-			p.scheme = r.scheme and
-			p.identifier = r.identifier and
-			r.dump_id = %d
- 	`, dumpID)); err == nil {
+	if rows, err := tx.Query(ctx, sqlf.Sprintf(`SELECT scheme, identifier FROM lsif_data_references WHERE schema_version = 1 AND dump_id = 9`)); err == nil {
 		var a, b string
 		for rows.Next() {
 			if err := rows.Scan(&a, &b); err == nil {
-				fmt.Printf("JOINED: %s %s\n", a, b)
+				fmt.Printf("TARGET TABLE VALUES: %s %s\n", a, b)
 			}
 		}
 		_ = rows.Err()
 		_ = rows.Close()
 	}
+
+	// fmt.Printf("JOINS?:\n")
+	// if rows, err := tx.Query(ctx, sqlf.Sprintf(`
+	// 	SELECT r.scheme, r.identifier, r.dump_id
+	// 	FROM lsif_data_references r
+	// 	JOIN t_migration_payload p
+	// 	ON
+	// 		p.scheme = r.scheme and
+	// 		p.identifier = r.identifier
+	// `, dumpID)); err == nil {
+	// 	var a, b string
+	// 	var c int
+	// 	for rows.Next() {
+	// 		if err := rows.Scan(&a, &b, &c); err == nil {
+	// 			fmt.Printf("JOINED: %s %s %d\n", a, b, c)
+	// 		} else {
+	// 			panic(err.Error())
+	// 		}
+	// 	}
+	// 	if err := rows.Err(); err != nil {
+	// 		panic(err.Error())
+	// 	}
+	// 	_ = rows.Close()
+	// } else {
+	// 	panic(err.Error())
+	// }
 
 	q := sqlf.Sprintf(
 		updateBatchUpdateQuery,
@@ -491,7 +508,7 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		dumpID,
 		sqlf.Join(m.updateConditions, " AND "),
 	)
-	fmt.Printf("> UPDATING BATCH FOR DUMP %d\n%s\n>> %v\n", dumpID, q.Query(sqlf.PostgresBindVar), q.Args())
+	// fmt.Printf("> UPDATING BATCH FOR DUMP %d\n%s\n>> %v\n", dumpID, q.Query(sqlf.PostgresBindVar), q.Args())
 
 	// Note that we assign a parameterized dump identifier and schema version here since
 	// both values are the same for all rows in this operation.
