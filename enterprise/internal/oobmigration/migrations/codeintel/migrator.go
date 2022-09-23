@@ -433,7 +433,7 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		temporaryTableExpression,
 		sqlf.Join(m.temporaryTableFieldSpecs, ", "),
 	)
-	fmt.Printf("> CREATING TABLE %d\n%s\n>> %v\n", dumpID, qq.Query(sqlf.PostgresBindVar), qq.Args())
+	fmt.Printf("> CREATING TABLE %d\n%s\n>> %v\n", dumpID, q1.Query(sqlf.PostgresBindVar), q1.Args())
 
 	if err := tx.Exec(ctx, q1); err != nil {
 		return err
