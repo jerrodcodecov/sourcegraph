@@ -466,5 +466,5 @@ CREATE TEMPORARY TABLE %s (%s) ON COMMIT DROP
 
 const updateBatchUpdateQuery = `
 -- source: enterprise/internal/oobmigrations/migrations/codeintel/migrator.go:updateBatch
-WITH upd AS (UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s) SELECT COUNT(*) FROM upd
+WITH upd AS (UPDATE %s dest SET %s, schema_version = %s FROM %s src WHERE dump_id = %s AND %s RETURNING 1) SELECT COUNT(*) FROM upd
 `
