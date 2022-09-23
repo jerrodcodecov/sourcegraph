@@ -436,6 +436,12 @@ func (m *migrator) updateBatch(ctx context.Context, tx *basestore.Store, dumpID,
 		return err
 	}
 
+	valueCount, _, err := basestore.ScanFirstInt(tx.Query(ctx, sqlf.Sprintf(`SELECT COUNT(*) FROM %s`, temporaryTableExpression)))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("NUM INSERTED: %d\n", valueCount)
+
 	q := sqlf.Sprintf(
 		updateBatchUpdateQuery,
 		sqlf.Sprintf(m.options.tableName),
